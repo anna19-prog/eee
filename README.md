@@ -1,2 +1,2 @@
 # eee
-проект ивр
+проект ивр English Exam Elixir (EEE)
