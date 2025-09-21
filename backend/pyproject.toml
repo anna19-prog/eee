@@ -1,0 +1,18 @@
+[project]
+name = "eee"
+version = "0.1.0"
+description = "meow meow meow"
+authors = [
+    {name = "anna19-prog",email = "missannastar@yandex.ru"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi (>=0.117.1,<0.118.0)",
+    "uvicorn (>=0.36.0,<0.37.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
