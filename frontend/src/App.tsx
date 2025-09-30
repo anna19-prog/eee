@@ -1,16 +1,82 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Container, Typography, Button, Box, AppBar, Toolbar } from "@mui/material";
+import { Typography, Button, Box, AppBar, Toolbar, Modal, Alert, TextField } from "@mui/material";
 
 
 const App: React.FC = () => {
     const [message, setMessage] = useState<string>("");
+    const [authOpen, setAuthOpen] = useState<boolean>(false);
+    const [isLogin, setIsLogin] = useState<boolean>(true);
+    const [email, setEmail] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [userEmail, setUserEmail] = useState<string>("");
+    const [error, setError] = useState<string>("");
 
     useEffect(() => {
         axios.get("/api/")
             .then(response => setMessage(response.data.message))
             .catch(error => console.error("Error fetching data", error));
+
+            checkAuth();
     }, []);
+
+    const checkAuth = async () => {
+        try {
+            const response = await axios.get("/auth/check");
+            if (response.data.authenticated) {
+                setIsAuthenticated(true);
+                setUserEmail(response.data.user);
+            }
+        } catch (error) {
+            console.error("Auth check failed", error);
+        }
+    };
+
+    const handleAuth = async () => {
+        setError("");
+        try {
+            const endpoint = isLogin ? "/auth/jwt/login" : "/auth/register";
+            const response = await axios.post(endpoint, {
+                email: email,
+                password: password
+            });
+
+            if (isLogin && response.data.access_token) {
+                // Сохраняем токен
+                localStorage.setItem("token", response.data.access_token);
+                setIsAuthenticated(true);
+                setUserEmail(email);
+                setAuthOpen(false);
+                setEmail("");
+                setPassword("");
+            } else if (!isLogin) {
+                // После регистрации переключаемся на логин
+                setIsLogin(true);
+                setError("Registration successful! Please login.");
+            }
+        } catch (error: any) {
+            setError(error.response?.data?.detail || "Authentication failed");
+        }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        setIsAuthenticated(false);
+        setUserEmail("");
+    };
+
+    const modalStyle = {
+        position: 'absolute' as 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 400,
+        bgcolor: 'background.paper',
+        boxShadow: 24,
+        p: 4,
+        borderRadius: 2,
+    };
 
     return (
         <Box
@@ -20,8 +86,8 @@ const App: React.FC = () => {
               padding: '2rem',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'center', // Центрируем контент
-              alignItems: 'center', // Центрируем по горизонтали
+              justifyContent: 'center',
+              alignItems: 'center',
               margin: 0,
               width: '100vw',
               boxSizing: 'border-box'
@@ -39,21 +105,108 @@ const App: React.FC = () => {
                     <Typography 
                         variant="h6" 
                         sx={{ 
-                            fontFamily: 'Monospace',
+                            fontFamily: "'Nunito', sans-serif",
                             fontWeight: 'bold'
                         }}
                     >
                         English Exam Elixir
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', gap: '3rem'}}>
+                    <Box sx={{ 
+                          display: 'flex',
+                          gap: '3rem',
+                          fontFamily: "'Nunito', sans-serif"
+                        }}>
                         <Button color="inherit">Home</Button>
                         <Button color="inherit">FCE</Button>
                         <Button color="inherit">CAE</Button>
-                        <Button color="inherit">Profile</Button>
+                        {isAuthenticated ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Typography variant="body2">
+                                    Hello, {userEmail}
+                                </Typography>
+                                <Button 
+                                    color="inherit" 
+                                    onClick={handleLogout}
+                                    sx={{ border: '1px solid white' }}
+                                >
+                                    Logout
+                                </Button>
+                            </Box>
+                        ) : (
+                            <Button 
+                                color="inherit" 
+                                onClick={() => setAuthOpen(true)}
+                                sx={{ border: '1px solid white' }}
+                            >
+                                Login
+                            </Button>
+                        )}
                     </Box>
                 </Toolbar>
             </AppBar>
+
+            {/* Модальное окно авторизации -- всплывающее окно поверх основного контента*/}
+            <Modal
+                open={authOpen}
+                onClose={() => setAuthOpen(false)}
+                aria-labelledby="auth-modal"
+            >
+                <Box sx={modalStyle}>
+                    <Typography variant="h5" gutterBottom sx={{ fontFamily: "'Nunito', sans-serif" }}>
+                        {isLogin ? "Login" : "Register"}
+                    </Typography>
+                    
+                    {error && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+
+                    <TextField
+                        fullWidth
+                        label="Email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        margin="normal"
+                    />
+                    <TextField
+                        fullWidth
+                        label="Password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        margin="normal"
+                    />
+                    
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={handleAuth}
+                        sx={{ 
+                            mt: 2,
+                            backgroundColor: '#8c6a97ff',
+                            '&:hover': { backgroundColor: '#7a5985ff' }
+                        }}
+                    >
+                        {isLogin ? "Login" : "Register"}
+                    </Button>
+                    
+                    <Button
+                        fullWidth
+                        variant="text"
+                        onClick={() => {
+                            setIsLogin(!isLogin);
+                            setError("");
+                        }}
+                        sx={{ mt: 1 }}
+                    >
+                        {isLogin ? "Need an account? Register" : "Already have an account? Login"}
+                    </Button>
+                </Box>
+            </Modal>
+
             <Box 
                 sx={{ 
                     flex: 1,
@@ -62,7 +215,7 @@ const App: React.FC = () => {
                     justifyContent: 'center',
                     alignItems: 'center',
                     padding: '2rem',
-                    paddingTop: '80px' // ← Отступ для фиксированной панели
+                    paddingTop: '80px'
                 }}
             >
               {/* Название */}
